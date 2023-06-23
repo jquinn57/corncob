@@ -22,7 +22,6 @@ def sync_lines(image, show_debug=False):
 
     sync_templateA = sync_templateA - sync_templateA.mean()
 
-
     sync_templateB = -1 * np.ones(39, dtype=float)
     j = 4
     for n in range(7):
@@ -131,6 +130,11 @@ def normalize_image(image, tele):
     img = np.clip(255 * img, 0, 255).astype(np.uint8)
     return img
 
+def apply_false_color(image_A, image_B, palette='noaa-apt-daylight.png'):
+    pal_img = np.array(Image.open(palette))
+    img2 = pal_img[image_B.flatten(), image_A.flatten()]
+    img2 = img2.reshape( (image_A.shape[0], image_A.shape[1], -1))
+    return img2
 
 def process_wav(filename, is_northbound=True):
 
@@ -186,7 +190,13 @@ def process_wav(filename, is_northbound=True):
     image = normalize_image(image, tele_A)
 
     image_A, image_B = extract_channels(image)
-    image_AB = np.stack([image_A, image_A, image_B], axis=2)
+    image_AB = apply_false_color(image_A, image_B)
+
+    # image_AB = np.stack([image_A, image_A, image_B], axis=2)
+
+    image_pil = Image.fromarray(np.rot90(image, k=2))
+    image_pil.save(filename.replace('.wav', '.png'))
+
 
     if is_northbound:
         image_AB = np.rot90(image_AB, k=2)
