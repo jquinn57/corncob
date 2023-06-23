@@ -138,17 +138,22 @@ def apply_false_color(image_A, image_B, palette='noaa-apt-daylight.png'):
 
 def process_wav(filename, is_northbound=True):
 
+    pixels_per_line = 2080
+    carrier_freq = 2400
+
     wave_reader = wave.open(filename)
-    N = 11025  # load 1 second at a time
     sample_rate = wave_reader.getframerate()
+    sigma = sample_rate / (2 * pixels_per_line)
+
+    N_chunk = sample_rate  # load 1 second at a time (2 lines)
     sample_type = np.int8 if wave_reader.getsampwidth() == 1 else np.int16
 
     data = []
     while True:
-        samples = wave_reader.readframes(N)
+        samples = wave_reader.readframes(N_chunk)
         y = np.frombuffer(samples, dtype=sample_type)
         y = y.astype(float) / np.iinfo(sample_type).max
-        if len(y) != N:
+        if len(y) != N_chunk:
             break
         data.append(y)
 
@@ -156,7 +161,6 @@ def process_wav(filename, is_northbound=True):
 
     N = len(ys)
     sample_dt = 1 / sample_rate
-    carrier_freq = 2400
     ts = sample_dt * np.arange(N)
     carrier_signal0 = np.sin(2 * np.pi * carrier_freq * ts)
     carrier_signal90 = np.cos(2 * np.pi * carrier_freq * ts)
@@ -164,9 +168,8 @@ def process_wav(filename, is_northbound=True):
     prod_complex = np.zeros(N, dtype=complex)
     prod_complex.real = ys * carrier_signal0
     prod_complex.imag = ys * carrier_signal90
-    prod_complex = gaussian_filter(prod_complex, sigma=2.5)
+    prod_complex = gaussian_filter(prod_complex, sigma=sigma)
 
-    pixels_per_line = 2080
     pixels_per_second = 2 * pixels_per_line
     num_pixels = int(round(pixels_per_second * ts[-1]))
 
@@ -191,12 +194,6 @@ def process_wav(filename, is_northbound=True):
 
     image_A, image_B = extract_channels(image)
     image_AB = apply_false_color(image_A, image_B)
-
-    # image_AB = np.stack([image_A, image_A, image_B], axis=2)
-
-    image_pil = Image.fromarray(np.rot90(image, k=2))
-    image_pil.save(filename.replace('.wav', '.png'))
-
 
     if is_northbound:
         image_AB = np.rot90(image_AB, k=2)
