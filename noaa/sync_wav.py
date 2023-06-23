@@ -6,6 +6,7 @@ from scipy.ndimage import gaussian_filter
 from scipy.signal import decimate
 from scipy.interpolate import interp1d
 from PIL import Image
+import argparse
 
 '''
 https://webapp1.dlib.indiana.edu/virtual_disk_library/index.cgi/2790181/FID1497/klm/html/c4/sec4-2.htm
@@ -94,7 +95,6 @@ def extract_telemetry(image, chan):
     for i, target in enumerate(wedge_targets):
         template[i * 8: (i + 1) * 8] = target / 255
 
-
     xc = np.correlate(x, template, mode='same')
     # index of start of best set of wedges
     i_start = np.argmax(xc) - len(template) // 2
@@ -136,7 +136,7 @@ def apply_false_color(image_A, image_B, palette='noaa-apt-daylight.png'):
     img2 = img2.reshape( (image_A.shape[0], image_A.shape[1], -1))
     return img2
 
-def process_wav(filename, is_northbound=True):
+def process_wav(filename, is_northbound=True, pal=None):
 
     pixels_per_line = 2080
     carrier_freq = 2400
@@ -193,7 +193,11 @@ def process_wav(filename, is_northbound=True):
     image = normalize_image(image, tele_A)
 
     image_A, image_B = extract_channels(image)
-    image_AB = apply_false_color(image_A, image_B)
+
+    if pal is not None:
+        image_AB = apply_false_color(image_A, image_B)
+    else:
+        image_AB = np.concatenate([image_A, image_B], axis=1)
 
     if is_northbound:
         image_AB = np.rot90(image_AB, k=2)
@@ -202,8 +206,15 @@ def process_wav(filename, is_northbound=True):
 
 if __name__ == '__main__':
 
-    image_AB, chan_A, chan_B = process_wav('argentina.wav')
+    parser = argparse.ArgumentParser(description="NOAA APT Processor")
+    parser.add_argument('--input', default='argentina.wav', help='Input wav file')
+    parser.add_argument('--pal', default='noaa-apt-daylight.png', help='palette')
+    parser.add_argument('--southbound', action='store_true')
+    args = parser.parse_args()
+
+    image_AB, chan_A, chan_B = process_wav(args.input, is_northbound=not args.southbound, pal=args.pal)
     print(chan_A)
     print(chan_B)
     image_pil = Image.fromarray(image_AB)
+    image_pil.save(args.input.replace('.wav', '.png'))
     image_pil.show()
