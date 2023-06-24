@@ -2,9 +2,6 @@ import wave
 from IPython import embed
 import numpy as np
 import matplotlib.pyplot as plt
-from scipy.ndimage import gaussian_filter
-from scipy.signal import decimate
-from scipy.interpolate import interp1d
 from PIL import Image
 import argparse
 
@@ -20,7 +17,6 @@ def sync_lines(image, show_debug=False):
     for n in range(7):
         sync_templateA[j:j+2] = 1
         j += 4
-
     sync_templateA = sync_templateA - sync_templateA.mean()
 
     sync_templateB = -1 * np.ones(39, dtype=float)
@@ -28,7 +24,6 @@ def sync_lines(image, show_debug=False):
     for n in range(7):
         sync_templateB[j:j+3] = 1
         j += 5
-
     sync_templateB = sync_templateB - sync_templateB.mean()
 
     img_debug = np.stack([image] *3, axis=2)
@@ -98,7 +93,7 @@ def extract_telemetry(image, chan):
     xc = np.correlate(x, template, mode='same')
     # index of start of best set of wedges
     i_start = np.argmax(xc) - len(template) // 2
-    # probably should use all repeats instead of just selecting one (there could be errors in the important part)
+    # probably should use all repeats instead of just selecting one
     x = x[i_start: i_start + 16 * 8]
     x = np.reshape(x, (-1, 8))
     x =  x.mean(axis=1)
@@ -120,7 +115,8 @@ def identify_channel(tele):
     dist = np.abs(targets - tele[-1])
     i = np.argmin(dist)
 
-    chan_data = {'name': names[i], 'wavelengths': [wavelengths_min[i], wavelengths_max[i]], 'description': description[i]}
+    chan_data = {'name': names[i], 'wavelengths': [wavelengths_min[i], wavelengths_max[i]],
+                 'description': description[i]}
     return chan_data
 
 def normalize_image(image, tele):
@@ -152,6 +148,8 @@ def process_wav(filename, is_northbound=True, pal=None):
     while True:
         samples = wave_reader.readframes(N_chunk)
         y = np.frombuffer(samples, dtype=sample_type)
+        if wave_reader.getnchannels() == 2:
+            y = y[::2]  # use every other sample if stereo
         y = y.astype(float) / np.iinfo(sample_type).max
         if len(y) != N_chunk:
             break
@@ -168,14 +166,17 @@ def process_wav(filename, is_northbound=True, pal=None):
     prod_complex = np.zeros(N, dtype=complex)
     prod_complex.real = ys * carrier_signal0
     prod_complex.imag = ys * carrier_signal90
-    prod_complex = gaussian_filter(prod_complex, sigma=sigma)
+
+    nfilter =  int(round(8 * sigma)) + 1
+    xs = np.arange(nfilter) - 0.5 * nfilter
+    guassian_kernel = np.exp(-xs **2 / (2 * sigma ** 2))
+    prod_complex = np.convolve(prod_complex, guassian_kernel, mode='same')
 
     pixels_per_second = 2 * pixels_per_line
     num_pixels = int(round(pixels_per_second * ts[-1]))
 
     pixel_ts = np.linspace(ts[0], ts[-1], num_pixels)
-    prod_interp_fn = interp1d(ts, np.abs(prod_complex))
-    pixel_intens = prod_interp_fn(pixel_ts)
+    pixel_intens = np.interp(pixel_ts, ts, np.abs(prod_complex))
 
     image = np.reshape(pixel_intens, (-1, pixels_per_line))
 
@@ -189,13 +190,16 @@ def process_wav(filename, is_northbound=True, pal=None):
 
     chan_A = identify_channel(tele_A)
     chan_B = identify_channel(tele_B)
+    print(tele_A)
+    print(tele_B)
 
-    image = normalize_image(image, tele_A)
+    #image = normalize_image(image, tele_A)
+    Image.fromarray(image).show()
 
     image_A, image_B = extract_channels(image)
 
     if pal is not None:
-        image_AB = apply_false_color(image_A, image_B)
+        image_AB = apply_false_color(image_A, image_B, palette=pal)
     else:
         image_AB = np.concatenate([image_A, image_B], axis=1)
 
@@ -208,7 +212,7 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description="NOAA APT Processor")
     parser.add_argument('--input', default='argentina.wav', help='Input wav file')
-    parser.add_argument('--pal', default='noaa-apt-daylight.png', help='palette')
+    parser.add_argument('--pal', default='./palettes/noaa-apt-daylight.png', help='palette')
     parser.add_argument('--southbound', action='store_true')
     args = parser.parse_args()
 
