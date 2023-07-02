@@ -4,6 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from PIL import Image
 import argparse
+from skimage.exposure import equalize_adapthist
 
 '''
 https://webapp1.dlib.indiana.edu/virtual_disk_library/index.cgi/2790181/FID1497/klm/html/c4/sec4-2.htm
@@ -119,11 +120,14 @@ def identify_channel(tele):
                  'description': description[i]}
     return chan_data
 
-def normalize_image(image, tele):
-    max_wedge = tele[7]
-    min_wedge = tele[8]
-    img = (image.astype(float) - min_wedge) / (max_wedge - min_wedge)
-    img = np.clip(255 * img, 0, 255).astype(np.uint8)
+def normalize_image(image, tele, use_clahe=True):
+    if use_clahe:
+        img = (255 * equalize_adapthist(image)).astype(np.uint8)
+    else:
+        max_wedge = tele[7]
+        min_wedge = tele[8]
+        img = (image.astype(float) - min_wedge) / (max_wedge - min_wedge)
+        img = np.clip(255 * img, 0, 255).astype(np.uint8)
     return img
 
 def apply_false_color(image_A, image_B, palette='noaa-apt-daylight.png'):
@@ -132,7 +136,7 @@ def apply_false_color(image_A, image_B, palette='noaa-apt-daylight.png'):
     img2 = img2.reshape( (image_A.shape[0], image_A.shape[1], -1))
     return img2
 
-def process_wav(filename, is_northbound=True, pal=None):
+def process_wav(filename, is_northbound=True, pal=None, use_clahe=False):
 
     pixels_per_line = 2080
     carrier_freq = 2400
@@ -190,13 +194,14 @@ def process_wav(filename, is_northbound=True, pal=None):
 
     chan_A = identify_channel(tele_A)
     chan_B = identify_channel(tele_B)
-    print(tele_A)
-    print(tele_B)
-
-    #image = normalize_image(image, tele_A)
-    Image.fromarray(image).show()
 
     image_A, image_B = extract_channels(image)
+
+    image_A = normalize_image(image_A, tele_A, use_clahe=use_clahe)
+    Image.fromarray(image_A).show()
+
+    image_B = normalize_image(image_B, tele_B, use_clahe=use_clahe)
+    Image.fromarray(image_B).show()
 
     if pal is not None:
         image_AB = apply_false_color(image_A, image_B, palette=pal)
@@ -214,9 +219,10 @@ if __name__ == '__main__':
     parser.add_argument('--input', default='argentina.wav', help='Input wav file')
     parser.add_argument('--pal', default='./palettes/noaa-apt-daylight.png', help='palette')
     parser.add_argument('--southbound', action='store_true')
+    parser.add_argument('--use_clahe', action='store_true')
     args = parser.parse_args()
 
-    image_AB, chan_A, chan_B = process_wav(args.input, is_northbound=not args.southbound, pal=args.pal)
+    image_AB, chan_A, chan_B = process_wav(args.input, is_northbound=not args.southbound, pal=args.pal, use_clahe=args.use_clahe)
     print(chan_A)
     print(chan_B)
     image_pil = Image.fromarray(image_AB)
