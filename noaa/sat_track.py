@@ -41,11 +41,6 @@ def plot_map_and_track(lat, long, heights, img=None):
     long_mid = long[npts // 2]
     lat_mid = lat[npts // 2]
 
-    # long extent at the midpoint given a distance extent of +/- 2080 km
-    dist_extent_km = 909 * 2.8
-    earth_radius_km = 6371
-    long_extent_deg = 360 * dist_extent_km /( 2 * np.pi * earth_radius_km * np.cos(np.pi * lat_mid / 180))
-
     # height in meters above the surface of the earth
     heights_mid_m = heights[npts // 2] * 1000
 
@@ -55,8 +50,13 @@ def plot_map_and_track(lat, long, heights, img=None):
     alpha = (180 / np.pi) * np.arctan(np.cos(np.pi * lat_mid / 180) * delta_long / delta_lat)
     print(alpha)
 
+    # long extent at the midpoint given a distance extent of +/- 2080 km
+    dist_extent_km = 909 * 2.89 * np.cos(alpha * np.pi / 180)
+    earth_radius_km = 6371
+    long_extent_deg = 360 * dist_extent_km /( 2 * np.pi * earth_radius_km * np.cos(np.pi * lat_mid / 180))
+
     # Create the projection
-    #projection = ccrs.NearsidePerspective(central_longitude=long_mid, central_latitude=lat_mid, satellite_height=heights_mid_m)
+    # projection = ccrs.NearsidePerspective(central_longitude=long_mid, central_latitude=lat_mid, satellite_height=heights_mid_m)
     projection = ccrs.Orthographic(central_longitude=long_mid, central_latitude=lat_mid)
     #projection = ccrs.Gnomonic(central_longitude=long_mid, central_latitude=lat_mid)
 
@@ -80,8 +80,6 @@ def plot_map_and_track(lat, long, heights, img=None):
     # Set the extent of the map
     ax.plot(long, lat, 'g', transform=ccrs.PlateCarree())
 
-
-
     return ax
 
 
@@ -94,8 +92,8 @@ satellite = by_name['NOAA 19']
 
 print(satellite.epoch.utc_jpl())
 
-wav_filename = 'gqrx_20230624_170718_137100000.wav'
-#wav_filename = 'gqrx_20230626_164306_137103000.wav'
+wav_filename = 'june24-noaa19.wav'
+#wav_filename = 'june24-noaa19.wav'
 
 # last timestamp
 mod_timestamp = os.path.getmtime(wav_filename)
@@ -116,13 +114,9 @@ ts = load.timescale()
 t = ts.from_datetimes(times)
 
 geocentric = satellite.at(t)
-print(geocentric.position.km)
 
 lat, lon = wgs84.latlon_of(geocentric)
 heights = wgs84.height_of(geocentric)
-print('Latitude:', lat.degrees)
-print('Longitude:', lon.degrees)
-print('heights:', heights.km)
 
 img = Image.open(wav_filename.replace('.wav', '.png'))
 
