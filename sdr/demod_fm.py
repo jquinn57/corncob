@@ -1,5 +1,5 @@
-import matplotlib.pyplot as plt 
-import numpy as np 
+import matplotlib.pyplot as plt
+import numpy as np
 from IPython import embed
 from scipy.ndimage import gaussian_filter
 from scipy.signal import decimate
@@ -8,7 +8,7 @@ import os
 
 
 def play_sound(x):
-    x = x.astype(np.float)
+    x = x.astype(float)
     y = (x - np.min(x)) / (np.max(x) - np.min(x))
     y = ((y-0.5)*120).astype(np.int8)
     sound = pygame.mixer.Sound(y.tobytes())
@@ -16,7 +16,6 @@ def play_sound(x):
 
 
 f_carrier = 100700000
-#f_carrier =  451863000
 input_sample_rate = 1024000
 T = 10.0
 num_samples = input_sample_rate * T
@@ -26,9 +25,9 @@ os.system(cmd)
 
 filename = 'temp.dat'
 data = np.fromfile(filename, dtype=np.uint8)
-z = np.zeros((len(data)//2), dtype=np.complex)
-z.real = (data[0::2].astype(np.float)/255) - 0.5
-z.imag = (data[1::2].astype(np.float)/255) - 0.5
+z = np.zeros((len(data)//2), dtype=complex)
+z.real = (data[0::2].astype(float)/255) - 0.5
+z.imag = (data[1::2].astype(float)/255) - 0.5
 
 modulation = 'FM'
 if modulation == 'FM':
