@@ -5,7 +5,7 @@ There many ways of doing it, but here is a procedure which worked for me:
 2. Use a V-dipole antenna with leg length of 53.4 cm.  The angle between the two legs should be 120 degrees. The V should be oriented horizontally with the point of the V pointing to the North.
 3. Connect the antenna to a RTL-SDR receiver
 4. Use GQRX to demodulate and record the signal to a wav file (see GQRX settings below)
-5. You may need to make small adjustments to the frequency to account for the Doppler effect. Try to keep the filter centered on the signal. 
+5. You may need to make small adjustments to the frequency to account for the Doppler effect. Try to keep the filter centered on the signal.
 6. Run process_apt.py script to produce an image from the wav file
 
 ## GQRX settings
@@ -16,3 +16,5 @@ There many ways of doing it, but here is a procedure which worked for me:
 5. Press "Rec" button near button right of screen.
 
 ![example](noaa19-example.png)
+
+![example2](gqrx_20230807_163827_137100000.png)
