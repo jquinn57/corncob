@@ -1,3 +1,6 @@
+# rtl_fm -f 467812500 -l 50 | play -t raw -r 24k -es -b 16 -c 1 -V1 -
+# in gqrx good settings were narrow FM, filter width  5kHz, squelch -55 dB, max deviation 2.5 kHz
+
 import asyncio
 import numpy as np
 import matplotlib.pyplot as plt
@@ -9,15 +12,18 @@ f_carrier = 467812500
 
 stt = SpeechToText()
 
-def process_message(message, show_wave=False):
+def process_message(message, show_wave=True):
+
+
+    # writing to wav should not be needed remove later
+    ntrim = int(0.5 * sampling_rate)
+    message = message[ntrim:-2*ntrim]
+
     if show_wave:
         plt.plot(message)
         plt.ylim([-5000, 5000])
         plt.show()
-
-    # writing to wav should not be needed remove later
-    ntrim = int(0.5 * sampling_rate)
-    message = message[ntrim:]
+    
     filename = 'temp.wav'
     with wave.open(filename, 'wb') as fp:
         fp.setnchannels(1)
@@ -27,7 +33,7 @@ def process_message(message, show_wave=False):
         fp.writeframes(message)
 
     out_text = stt.process_wav(filename)
-    print('Message Received:')
+    print('\nMessage Received:')
     print(out_text)
 
 
@@ -40,7 +46,7 @@ async def read_with_timeout(process, timeout):
         return None
 
 async def main():
-    cmd = f'rtl_fm -f {f_carrier} -l 50'
+    cmd = f'rtl_fm -f {f_carrier} -s 24k -l 50 -E deemp'
     cmd_list = cmd.split()
     process = await asyncio.create_subprocess_exec(
         *cmd_list,
@@ -62,7 +68,7 @@ async def main():
             # Convert bytes to numpy ndarray of int16 type
             x = np.frombuffer(data_chunk, dtype=np.int16)
             data.append(x)
-            #print(f"Recieving: {x[:10]}...")
+            print(f"Receiving: {x[:10]}...")
 
     except KeyboardInterrupt:
         print("\nReceived Ctrl+C. Initiating clean shutdown...")
