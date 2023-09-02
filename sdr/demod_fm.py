@@ -17,6 +17,9 @@ def play_sound(x):
 
 f_carrier = 100700000
 input_sample_rate = 1024000
+
+f_carrier = 467812500
+
 T = 10.0
 num_samples = input_sample_rate * T
 cmd = f'rtl_sdr -f {f_carrier} -s {input_sample_rate} -n {num_samples} temp.dat'

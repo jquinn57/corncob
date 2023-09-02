@@ -1,5 +1,8 @@
 # rtl_fm -f 467812500 -l 50 | play -t raw -r 24k -es -b 16 -c 1 -V1 -
-# in gqrx good settings were narrow FM, filter width  5kHz, squelch -55 dB, max deviation 2.5 kHz
+# in gqrx good settings were narrow FM, filter width  5kHz (normal), squelch -55 dB, max deviation 2.5 kHz, tau 0
+
+# another option is to use GQRX to stream the audio over UDP and play back with
+# nc -l -u 7355 | play -r 48k -b 16 -es -t raw -c 1 -V1 -
 
 import asyncio
 import numpy as np
@@ -14,16 +17,14 @@ stt = SpeechToText()
 
 def process_message(message, show_wave=True):
 
-
-    # writing to wav should not be needed remove later
     ntrim = int(0.5 * sampling_rate)
     message = message[ntrim:-2*ntrim]
 
     if show_wave:
         plt.plot(message)
-        plt.ylim([-5000, 5000])
         plt.show()
-    
+
+    # writing to wav should not be needed remove later
     filename = 'temp.wav'
     with wave.open(filename, 'wb') as fp:
         fp.setnchannels(1)
