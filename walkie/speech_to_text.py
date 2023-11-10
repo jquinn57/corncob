@@ -1,5 +1,5 @@
 import torch
-#import torchaudio
+import argparse
 
 class SpeechToText():
     def __init__(self):
@@ -17,3 +17,14 @@ class SpeechToText():
         output =self.model(input)
         out_text = self.decoder(output[0].cpu())
         return out_text
+
+
+
+if __name__ == '__main__':
+
+    parser = argparse.ArgumentParser(description="NOAA APT Processor")
+    parser.add_argument('--input', default=None, help='Path to wav file')
+    args = parser.parse_args()
+
+    stt = SpeechToText()
+    print(stt.process_wav(args.input))

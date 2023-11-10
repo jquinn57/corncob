@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 import queue
 from speech_to_text import SpeechToText
 import wave
+import datetime
 
 # broadcast to UDP using GQRX then listen with:
 # nc -l -u 7355 | play -r 48k -b 16 -es -t raw -c 1 -V1 -
@@ -13,15 +14,16 @@ import wave
 
 # Settings
 SAMPLING_RATE = 48000
-MAX_LEN = SAMPLING_RATE * 10
+MAX_LEN = SAMPLING_RATE * 10  # 10 second max
 PORT = 7355
 BUFFER_SIZE = 24000
 THRESHOLD = 1000  # TODO: adjust
 running = True
 
 def process_stt(message, stt):
-    # writing to wav should not be needed remove later
-    filename = 'temp.wav'
+    # keep wav files around for testing for now
+    filename = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S') + '.wav'
+    print(filename)
     with wave.open(filename, 'wb') as fp:
         fp.setnchannels(1)
         fp.setsampwidth(2)
